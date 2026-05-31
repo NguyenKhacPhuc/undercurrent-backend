@@ -55,4 +55,26 @@ class MigrationRunner(
             connection.autoCommit = originalAutoCommit
         }
     }
+
+    companion object {
+        fun fromClasspath(
+            connection: java.sql.Connection,
+            directory: String = "db/migrations",
+        ): MigrationRunner = MigrationRunner(connection, loadFromClasspath(directory))
+
+        private fun loadFromClasspath(directory: String): List<Migration> {
+            val cl = MigrationRunner::class.java.classLoader
+            val manifest = cl.getResourceAsStream("$directory/_manifest.txt")
+                ?: error("Missing migrations manifest: $directory/_manifest.txt")
+            val names = manifest.bufferedReader().use { it.readLines() }
+                .map { it.trim() }
+                .filter { it.isNotEmpty() && !it.startsWith("#") }
+            return names.map { name ->
+                val sql = cl.getResourceAsStream("$directory/$name")
+                    ?.bufferedReader()?.use { it.readText() }
+                    ?: error("Migration listed in manifest but not on classpath: $directory/$name")
+                Migration(name, sql)
+            }
+        }
+    }
 }
