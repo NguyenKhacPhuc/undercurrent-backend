@@ -1,0 +1,36 @@
+# Gradle
+.gradle/
+build/
+out/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Local env / secrets (never commit)
+.env
+.env.local
+*.pem
+
+# Test reports
+**/test-results/
+**/reports/
+
+# OS / editor noise
+*.swp
+*.swo
+*~
