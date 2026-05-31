@@ -17,29 +17,54 @@ undercurrent-workspace/
 
 ## Status
 
-> [!warning] **Bootstrap in progress.**
-> This file is a skeleton; sections below will be filled in as stories
-> land. Tracking Inception lives at
-> `../inception/260531-1733-backend-bootstrap-auth/`.
+Story 01 (`backend-bootstrap-auth/01`) is the bootstrap PR — Ktor skeleton + `/health` + Railway deploy. Subsequent stories (02 = Postgres, 03+ = endpoints) flesh out the auth surface. Tracking Inception lives at `../inception/260531-1733-backend-bootstrap-auth/`.
 
-## Build & run (TBD — filled by Story 01)
+## Build & run
 
 ```bash
+# All commands run from this directory (backend/).
+
 # Run tests
 ./gradlew test
 
-# Run the app locally on the default port
+# Run the app locally on http://localhost:8080
 ./gradlew run
+
+# Smoke test the local server
+curl http://localhost:8080/health
+# → {"status":"ok"}
 ```
 
 Default port: `8080` (overridable via `PORT` env var — Railway sets this automatically).
+
+JDK: 21 (configured via Gradle toolchain — Gradle will provision if missing).
+
+## Deploy
+
+Auto-deployed to Railway on every push to `main`. No CI workflow in v1 — run `./gradlew test` locally before pushing.
+
+- **Production URL:** `https://undercurrent-backend-production.up.railway.app`
+- **Smoke:** `curl https://undercurrent-backend-production.up.railway.app/health`
+- **Railway project:** [`undercurrent-backend`](https://railway.com/project/981f26dc-2087-4a99-a7b3-fed821bc18dc)
+- **Builder:** Railpack (configured in [`railway.toml`](railway.toml))
+- **Healthcheck:** Railway pings `/health`; deploy fails if it doesn't 200 within 30s.
+
+### One-off deploy from CLI
+
+```bash
+railway login    # interactive, one-time
+railway link     # link the local checkout to the project
+railway up       # uploads + builds + deploys from the current working tree
+```
+
+Useful for testing infra changes without pushing to `main`.
 
 ## Env vars
 
 | Name | Required | Notes |
 |---|---|---|
-| `PORT` | no (defaults to 8080) | Set by Railway in production. |
-| `DATABASE_URL` | yes (after Story 02) | Postgres connection URL. Comes from Railway's Postgres add-on. |
+| `PORT` | no (defaults to 8080) | Set automatically by Railway. |
+| `DATABASE_URL` | yes (after Story 02 lands) | Postgres connection URL from Railway's Postgres add-on. Not used yet. |
 
 Other secrets: see [the BE Inception's D7](../inception/260531-1733-backend-bootstrap-auth/decisions.md) — Railway env vars only for v1; no vault.
 
