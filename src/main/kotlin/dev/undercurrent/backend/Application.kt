@@ -1,5 +1,8 @@
 package dev.undercurrent.backend
 
+import dev.undercurrent.backend.accounts.AccountsRepository
+import dev.undercurrent.backend.accounts.JdbcAccountsRepository
+import dev.undercurrent.backend.auth.signUpRoute
 import dev.undercurrent.backend.db.Db
 import dev.undercurrent.backend.db.MigrationRunner
 import dev.undercurrent.backend.sessions.JdbcSessionsRepository
@@ -23,15 +26,20 @@ fun main() {
     // DATABASE_URL; the first getConnection() throws if the URL is unreachable.
     val dataSource = Db.dataSource()
     dataSource.connection.use { MigrationRunner.fromClasspath(it).migrate() }
+    val accountsRepository = JdbcAccountsRepository(dataSource)
     val sessionsRepository = JdbcSessionsRepository(dataSource)
 
     embeddedServer(Netty, port = port, host = "0.0.0.0") {
-        module(sessionsRepository = sessionsRepository)
+        module(
+            accountsRepository = accountsRepository,
+            sessionsRepository = sessionsRepository,
+        )
     }.start(wait = true)
 }
 
 fun Application.module(
     migrationRunner: MigrationRunner? = null,
+    accountsRepository: AccountsRepository? = null,
     sessionsRepository: SessionsRepository? = null,
 ) {
     install(ContentNegotiation) { json() }
@@ -40,6 +48,9 @@ fun Application.module(
     routing {
         get("/health") {
             call.respond(HealthResponse(status = "ok"))
+        }
+        if (accountsRepository != null && sessionsRepository != null) {
+            signUpRoute(accountsRepository, sessionsRepository)
         }
     }
 }

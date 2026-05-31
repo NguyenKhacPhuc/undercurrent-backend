@@ -28,6 +28,10 @@ dependencies {
     // Postgres + JDBC for the migration runner (story 02).
     implementation("org.postgresql:postgresql:42.7.4")
 
+    // Argon2id password hashing for sign-up/sign-in (stories 05/06).
+    // Pure Java; no native bindings.
+    implementation("com.password4j:password4j:1.8.2")
+
     testImplementation("io.ktor:ktor-server-test-host-jvm:$ktorVersion")
     testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
     testImplementation("io.kotest:kotest-assertions-core:$kotestVersion")
