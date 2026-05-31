@@ -25,9 +25,17 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
     implementation("ch.qos.logback:logback-classic:1.5.13")
 
+    // Postgres + JDBC for the migration runner (story 02).
+    implementation("org.postgresql:postgresql:42.7.4")
+
     testImplementation("io.ktor:ktor-server-test-host-jvm:$ktorVersion")
     testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
     testImplementation("io.kotest:kotest-assertions-core:$kotestVersion")
+
+    // H2 in Postgres-compat mode for DB-roundtrip tests.
+    // Was Testcontainers Postgres; pivoted during Story 02 Construction due to
+    // a Docker Desktop helper-socket compat issue. See workspace decisions D10/D11.
+    testImplementation("com.h2database:h2:2.3.232")
 }
 
 kotlin {

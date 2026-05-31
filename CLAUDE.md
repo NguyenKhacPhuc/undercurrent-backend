@@ -28,7 +28,8 @@ Story 01 (`backend-bootstrap-auth/01`) is the bootstrap PR — Ktor skeleton + `
 ./gradlew test
 
 # Run the app locally on http://localhost:8080
-./gradlew run
+# Requires DATABASE_URL — see "Local Postgres" below.
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/undercurrent ./gradlew run
 
 # Smoke test the local server
 curl http://localhost:8080/health
@@ -38,6 +39,40 @@ curl http://localhost:8080/health
 Default port: `8080` (overridable via `PORT` env var — Railway sets this automatically).
 
 JDK: 21 (configured via Gradle toolchain — Gradle will provision if missing).
+
+The app fails fast on boot if `DATABASE_URL` is missing or the DB is unreachable.
+
+## Local Postgres
+
+Tests use in-memory H2 (no Docker needed). For `./gradlew run` you need a real Postgres on `localhost:5432`. Easiest path is Docker:
+
+```bash
+# Start a one-off Postgres locally
+docker run --rm -d --name uc-postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=undercurrent \
+  -p 5432:5432 \
+  postgres:16-alpine
+
+# Point the app at it
+export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/undercurrent
+./gradlew run
+
+# Stop it when done
+docker stop uc-postgres
+```
+
+Native install also works (`brew install postgresql@16 && brew services start postgresql@16`), but Docker is fastest to throw away. The migration runner will create `schema_migrations` and apply `V001__baseline.sql` on first boot; you'll see one row after.
+
+## Migrations
+
+Add a new migration by:
+
+1. Drop a file `src/main/resources/db/migrations/V<NNN>__<short_name>.sql` (lexicographic — `V001`, `V002`, ...).
+2. Append the filename to `src/main/resources/db/migrations/_manifest.txt`.
+3. Restart the app — pending migrations apply in manifest order; idempotent on re-runs.
+
+Each migration runs in its own transaction. A failure rolls back and the app boot fails (no partial apply).
 
 ## Deploy
 
