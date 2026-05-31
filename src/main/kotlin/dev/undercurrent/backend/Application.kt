@@ -4,6 +4,7 @@ import dev.undercurrent.backend.accounts.AccountsRepository
 import dev.undercurrent.backend.accounts.JdbcAccountsRepository
 import dev.undercurrent.backend.auth.NoopSignInRateLimiter
 import dev.undercurrent.backend.auth.SignInRateLimiter
+import dev.undercurrent.backend.auth.meRoute
 import dev.undercurrent.backend.auth.signInRoute
 import dev.undercurrent.backend.auth.signOutRoute
 import dev.undercurrent.backend.auth.signUpRoute
@@ -57,6 +58,7 @@ fun Application.module(
         if (accountsRepository != null && sessionsRepository != null) {
             signUpRoute(accountsRepository, sessionsRepository)
             signInRoute(accountsRepository, sessionsRepository, signInRateLimiter)
+            meRoute(accountsRepository)
         }
         // Sign-out only needs sessions; kept in its own block to (a) reflect
         // that minimal dep accurately and (b) reduce merge-conflict surface
