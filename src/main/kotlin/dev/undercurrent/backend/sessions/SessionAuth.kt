@@ -1,5 +1,6 @@
 package dev.undercurrent.backend.sessions
 
+import dev.undercurrent.backend.auth.ErrorEnvelope
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCallPipeline
@@ -7,7 +8,6 @@ import io.ktor.server.application.call
 import io.ktor.server.response.respond
 import io.ktor.server.routing.RoutingContext
 import io.ktor.util.AttributeKey
-import kotlinx.serialization.Serializable
 
 /**
  * Reads `Authorization: Bearer <token>` from incoming requests; if the token
@@ -32,12 +32,6 @@ fun Application.installSessionAuth(repository: SessionsRepository) {
 /** Key under which the authenticated account id is stored on the call. */
 val AuthenticatedAccountIdKey: AttributeKey<String> = AttributeKey("undercurrent.AuthenticatedAccountId")
 
-@Serializable
-private data class ErrorEnvelope(val error: ErrorBody)
-
-@Serializable
-private data class ErrorBody(val code: String, val message: String)
-
 /**
  * Wraps a handler so that it only runs when the request carried a valid
  * session token; otherwise responds 401 with the standard error envelope.
@@ -56,7 +50,7 @@ suspend fun RoutingContext.requireAuth(
     if (accountId == null) {
         call.respond(
             HttpStatusCode.Unauthorized,
-            ErrorEnvelope(ErrorBody(code = "unauthenticated", message = "Missing or invalid session token")),
+            ErrorEnvelope.of("unauthenticated", "Missing or invalid session token"),
         )
         return
     }
