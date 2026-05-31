@@ -4,6 +4,7 @@ import dev.undercurrent.backend.accounts.AccountsRepository
 import dev.undercurrent.backend.accounts.JdbcAccountsRepository
 import dev.undercurrent.backend.auth.NoopSignInRateLimiter
 import dev.undercurrent.backend.auth.SignInRateLimiter
+import dev.undercurrent.backend.auth.meRoute
 import dev.undercurrent.backend.auth.signInRoute
 import dev.undercurrent.backend.auth.signUpRoute
 import dev.undercurrent.backend.db.Db
@@ -56,6 +57,7 @@ fun Application.module(
         if (accountsRepository != null && sessionsRepository != null) {
             signUpRoute(accountsRepository, sessionsRepository)
             signInRoute(accountsRepository, sessionsRepository, signInRateLimiter)
+            meRoute(accountsRepository)
         }
     }
 }
