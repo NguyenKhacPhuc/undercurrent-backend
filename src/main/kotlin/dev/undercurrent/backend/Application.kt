@@ -2,6 +2,7 @@ package dev.undercurrent.backend
 
 import dev.undercurrent.backend.accounts.AccountsRepository
 import dev.undercurrent.backend.accounts.JdbcAccountsRepository
+import dev.undercurrent.backend.auth.InMemorySignInRateLimiter
 import dev.undercurrent.backend.auth.NoopSignInRateLimiter
 import dev.undercurrent.backend.auth.SignInRateLimiter
 import dev.undercurrent.backend.auth.meRoute
@@ -33,11 +34,13 @@ fun main() {
     dataSource.connection.use { MigrationRunner.fromClasspath(it).migrate() }
     val accountsRepository = JdbcAccountsRepository(dataSource)
     val sessionsRepository = JdbcSessionsRepository(dataSource)
+    val signInRateLimiter = InMemorySignInRateLimiter()
 
     embeddedServer(Netty, port = port, host = "0.0.0.0") {
         module(
             accountsRepository = accountsRepository,
             sessionsRepository = sessionsRepository,
+            signInRateLimiter = signInRateLimiter,
         )
     }.start(wait = true)
 }
