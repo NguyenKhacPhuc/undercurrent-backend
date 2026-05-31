@@ -2,6 +2,9 @@ package dev.undercurrent.backend
 
 import dev.undercurrent.backend.accounts.AccountsRepository
 import dev.undercurrent.backend.accounts.JdbcAccountsRepository
+import dev.undercurrent.backend.auth.NoopSignInRateLimiter
+import dev.undercurrent.backend.auth.SignInRateLimiter
+import dev.undercurrent.backend.auth.signInRoute
 import dev.undercurrent.backend.auth.signUpRoute
 import dev.undercurrent.backend.db.Db
 import dev.undercurrent.backend.db.MigrationRunner
@@ -41,6 +44,7 @@ fun Application.module(
     migrationRunner: MigrationRunner? = null,
     accountsRepository: AccountsRepository? = null,
     sessionsRepository: SessionsRepository? = null,
+    signInRateLimiter: SignInRateLimiter = NoopSignInRateLimiter,
 ) {
     install(ContentNegotiation) { json() }
     migrationRunner?.migrate()
@@ -51,6 +55,7 @@ fun Application.module(
         }
         if (accountsRepository != null && sessionsRepository != null) {
             signUpRoute(accountsRepository, sessionsRepository)
+            signInRoute(accountsRepository, sessionsRepository, signInRateLimiter)
         }
     }
 }
