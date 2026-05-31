@@ -1,1 +1,2 @@
 V001__baseline.sql
+V002__accounts.sql
