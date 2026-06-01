@@ -27,7 +27,7 @@ class SignOutRouteTest : BehaviorSpec({
 
     Given("POST /v1/auth/sign-out") {
         When("a valid bearer token is presented") {
-            Then("responds 204 and the token no longer validates") {
+            Then("responds 200 and the token no longer validates") {
                 val (sessions, _) = freshSessions()
                 val issued = sessions.issue("acct.abc")
 
@@ -36,7 +36,7 @@ class SignOutRouteTest : BehaviorSpec({
                     val res = client.post("/v1/auth/sign-out") {
                         header("Authorization", "Bearer ${issued.token}")
                     }
-                    res.status shouldBe HttpStatusCode.NoContent
+                    res.status shouldBe HttpStatusCode.OK
                 }
 
                 sessions.validate(issued.token) shouldBe null
@@ -44,31 +44,31 @@ class SignOutRouteTest : BehaviorSpec({
         }
 
         When("no Authorization header is sent") {
-            Then("responds 204 (idempotent — no information leak)") {
+            Then("responds 200 (idempotent — no information leak)") {
                 val (sessions, _) = freshSessions()
                 testApplication {
                     application { module(sessionsRepository = sessions) }
                     val res = client.post("/v1/auth/sign-out")
-                    res.status shouldBe HttpStatusCode.NoContent
+                    res.status shouldBe HttpStatusCode.OK
                 }
             }
         }
 
         When("an unknown bearer token is sent") {
-            Then("responds 204 (idempotent — no information leak)") {
+            Then("responds 200 (idempotent — no information leak)") {
                 val (sessions, _) = freshSessions()
                 testApplication {
                     application { module(sessionsRepository = sessions) }
                     val res = client.post("/v1/auth/sign-out") {
                         header("Authorization", "Bearer never-existed")
                     }
-                    res.status shouldBe HttpStatusCode.NoContent
+                    res.status shouldBe HttpStatusCode.OK
                 }
             }
         }
 
         When("the bearer token was already revoked") {
-            Then("responds 204 (still idempotent)") {
+            Then("responds 200 (still idempotent)") {
                 val (sessions, _) = freshSessions()
                 val issued = sessions.issue("acct.abc")
                 sessions.revoke(issued.token)
@@ -78,7 +78,7 @@ class SignOutRouteTest : BehaviorSpec({
                     val res = client.post("/v1/auth/sign-out") {
                         header("Authorization", "Bearer ${issued.token}")
                     }
-                    res.status shouldBe HttpStatusCode.NoContent
+                    res.status shouldBe HttpStatusCode.OK
                 }
             }
         }

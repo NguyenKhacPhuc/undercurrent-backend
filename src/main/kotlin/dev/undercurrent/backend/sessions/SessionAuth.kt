@@ -1,6 +1,6 @@
 package dev.undercurrent.backend.sessions
 
-import dev.undercurrent.backend.auth.ErrorEnvelope
+import dev.undercurrent.backend.common.BaseErrorResponse
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCallPipeline
@@ -50,7 +50,7 @@ suspend fun RoutingContext.requireAuth(
     if (accountId == null) {
         call.respond(
             HttpStatusCode.Unauthorized,
-            ErrorEnvelope.of("unauthenticated", "Missing or invalid session token"),
+            BaseErrorResponse("unauthenticated", "Missing or invalid session token"),
         )
         return
     }

@@ -1,6 +1,8 @@
 package dev.undercurrent.backend.auth
 
 import dev.undercurrent.backend.accounts.AccountsRepository
+import dev.undercurrent.backend.common.BaseErrorResponse
+import dev.undercurrent.backend.common.BaseResponse
 import dev.undercurrent.backend.sessions.requireAuth
 import io.ktor.http.CacheControl
 import io.ktor.http.HttpStatusCode
@@ -24,7 +26,7 @@ fun Route.meRoute(accounts: AccountsRepository) {
                 // but the assumption may not hold forever.
                 call.respond(
                     HttpStatusCode.Unauthorized,
-                    ErrorEnvelope.of("unauthenticated", "Session is no longer valid"),
+                    BaseErrorResponse("unauthenticated", "Session is no longer valid"),
                 )
                 return@requireAuth
             }
@@ -32,12 +34,14 @@ fun Route.meRoute(accounts: AccountsRepository) {
             call.response.cacheControl(CacheControl.NoStore(visibility = CacheControl.Visibility.Private))
             call.respond(
                 HttpStatusCode.OK,
-                MeResponse(
-                    account = AccountDto(
-                        id = account.id,
-                        displayName = account.displayName,
-                        email = account.email,
-                        createdAtMs = account.createdAtMs,
+                BaseResponse.ok(
+                    MeResponse(
+                        account = AccountDto(
+                            id = account.id,
+                            displayName = account.displayName,
+                            email = account.email,
+                            createdAtMs = account.createdAtMs,
+                        ),
                     ),
                 ),
             )

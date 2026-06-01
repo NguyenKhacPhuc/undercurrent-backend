@@ -3,6 +3,8 @@ package dev.undercurrent.backend.auth
 import dev.undercurrent.backend.accounts.AccountsRepository
 import dev.undercurrent.backend.accounts.EmailAlreadyRegisteredException
 import dev.undercurrent.backend.accounts.NewAccount
+import dev.undercurrent.backend.common.BaseErrorResponse
+import dev.undercurrent.backend.common.BaseResponse
 import dev.undercurrent.backend.sessions.SessionsRepository
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
@@ -29,7 +31,7 @@ fun Route.signUpRoute(
         } catch (e: Exception) {
             call.respond(
                 HttpStatusCode.BadRequest,
-                ErrorEnvelope.of("invalid_request", "Request body is missing or malformed"),
+                BaseErrorResponse("invalid_request", "Request body is missing or malformed"),
             )
             return@post
         }
@@ -47,7 +49,7 @@ fun Route.signUpRoute(
         if (violations.isNotEmpty()) {
             call.respond(
                 HttpStatusCode.BadRequest,
-                ErrorEnvelope.of("invalid_request", "One or more fields are invalid", violations),
+                BaseErrorResponse("invalid_request", "One or more fields are invalid", violations),
             )
             return@post
         }
@@ -63,7 +65,7 @@ fun Route.signUpRoute(
         } catch (e: EmailAlreadyRegisteredException) {
             call.respond(
                 HttpStatusCode.Conflict,
-                ErrorEnvelope.of("email_already_registered", "An account with this email already exists"),
+                BaseErrorResponse("email_already_registered", "An account with this email already exists"),
             )
             return@post
         }
@@ -72,16 +74,18 @@ fun Route.signUpRoute(
 
         call.respond(
             HttpStatusCode.Created,
-            AuthResponse(
-                account = AccountDto(
-                    id = account.id,
-                    displayName = account.displayName,
-                    email = account.email,
-                    createdAtMs = account.createdAtMs,
-                ),
-                session = SessionDto(
-                    token = session.token,
-                    expiresAtMs = session.expiresAtMs,
+            BaseResponse.ok(
+                AuthResponse(
+                    account = AccountDto(
+                        id = account.id,
+                        displayName = account.displayName,
+                        email = account.email,
+                        createdAtMs = account.createdAtMs,
+                    ),
+                    session = SessionDto(
+                        token = session.token,
+                        expiresAtMs = session.expiresAtMs,
+                    ),
                 ),
             ),
         )

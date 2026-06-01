@@ -1,6 +1,8 @@
 package dev.undercurrent.backend.auth
 
 import dev.undercurrent.backend.accounts.AccountsRepository
+import dev.undercurrent.backend.common.BaseErrorResponse
+import dev.undercurrent.backend.common.BaseResponse
 import dev.undercurrent.backend.sessions.SessionsRepository
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
@@ -38,7 +40,7 @@ fun Route.signInRoute(
         } catch (e: Exception) {
             call.respond(
                 HttpStatusCode.BadRequest,
-                ErrorEnvelope.of("invalid_request", "Request body is missing or malformed"),
+                BaseErrorResponse("invalid_request", "Request body is missing or malformed"),
             )
             return@post
         }
@@ -49,7 +51,7 @@ fun Route.signInRoute(
         if (email.isEmpty() || password.isEmpty()) {
             call.respond(
                 HttpStatusCode.BadRequest,
-                ErrorEnvelope.of("invalid_request", "email and password are required"),
+                BaseErrorResponse("invalid_request", "email and password are required"),
             )
             return@post
         }
@@ -57,7 +59,7 @@ fun Route.signInRoute(
         if (rateLimiter.shouldThrottle(email)) {
             call.respond(
                 HttpStatusCode.TooManyRequests,
-                ErrorEnvelope.of("rate_limited", "Too many failed sign-in attempts. Try again later."),
+                BaseErrorResponse("rate_limited", "Too many failed sign-in attempts. Try again later."),
             )
             return@post
         }
@@ -76,7 +78,7 @@ fun Route.signInRoute(
             rateLimiter.recordFailedAttempt(email)
             call.respond(
                 HttpStatusCode.Unauthorized,
-                ErrorEnvelope.of("unauthenticated", "Invalid email or password"),
+                BaseErrorResponse("unauthenticated", "Invalid email or password"),
             )
             return@post
         }
@@ -86,14 +88,16 @@ fun Route.signInRoute(
 
         call.respond(
             HttpStatusCode.OK,
-            AuthResponse(
-                account = AccountDto(
-                    id = account.id,
-                    displayName = account.displayName,
-                    email = account.email,
-                    createdAtMs = account.createdAtMs,
+            BaseResponse.ok(
+                AuthResponse(
+                    account = AccountDto(
+                        id = account.id,
+                        displayName = account.displayName,
+                        email = account.email,
+                        createdAtMs = account.createdAtMs,
+                    ),
+                    session = SessionDto(token = session.token, expiresAtMs = session.expiresAtMs),
                 ),
-                session = SessionDto(token = session.token, expiresAtMs = session.expiresAtMs),
             ),
         )
     }
