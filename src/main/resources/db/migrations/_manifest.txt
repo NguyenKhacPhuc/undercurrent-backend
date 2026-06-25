@@ -1,3 +1,4 @@
 V001__baseline.sql
 V002__accounts.sql
 V003__sessions.sql
+V004__prompt_config.sql
