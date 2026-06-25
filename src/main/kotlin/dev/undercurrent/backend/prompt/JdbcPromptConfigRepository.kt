@@ -59,4 +59,21 @@ class JdbcPromptConfigRepository(private val dataSource: DataSource) : PromptCon
             }
         }
     }
+
+    override fun update(preamble: String): PromptConfig {
+        val revision = computeRevision(preamble)
+        val updatedAt = Timestamp(System.currentTimeMillis())
+        dataSource.connection.use { conn ->
+            conn.prepareStatement(
+                "UPDATE prompt_config SET preamble = ?, revision = ?, updated_at = ? WHERE id = ?",
+            ).use { ps ->
+                ps.setString(1, preamble)
+                ps.setString(2, revision)
+                ps.setTimestamp(3, updatedAt)
+                ps.setInt(4, SINGLETON_ID)
+                ps.executeUpdate()
+            }
+        }
+        return PromptConfig(preamble = preamble, revision = revision, updatedAtMs = updatedAt.time)
+    }
 }

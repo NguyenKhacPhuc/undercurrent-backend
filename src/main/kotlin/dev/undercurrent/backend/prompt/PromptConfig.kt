@@ -23,4 +23,12 @@ interface PromptConfigRepository {
      * an existing prompt.
      */
     fun seedIfEmpty(preamble: String)
+
+    /**
+     * Replace the singleton config's [preamble] with new text, recomputing
+     * the [PromptConfig.revision] and stamping a fresh [PromptConfig.updatedAtMs].
+     * Returns the resulting config. Callers are responsible for validating the
+     * text before calling (the store does not guard against empty/short input).
+     */
+    fun update(preamble: String): PromptConfig
 }
