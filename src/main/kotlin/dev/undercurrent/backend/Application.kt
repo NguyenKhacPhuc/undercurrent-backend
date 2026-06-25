@@ -43,6 +43,9 @@ fun main() {
     // Behavior-neutral cut-over: seed the served prompt with today's
     // app-owned preamble if no operator value exists yet (idempotent).
     promptConfigRepository.seedIfEmpty(SeedPrompt.APP_INTRO)
+    // Operator auth for PUT /v1/prompt-config (Q3 driver-guess). Read at boot;
+    // unset → the update endpoint fails closed. Never hardcode a value.
+    val promptOperatorSecret = System.getenv("PROMPT_OPERATOR_SECRET")
 
     embeddedServer(Netty, port = port, host = "0.0.0.0") {
         module(
@@ -50,6 +53,7 @@ fun main() {
             sessionsRepository = sessionsRepository,
             signInRateLimiter = signInRateLimiter,
             promptConfigRepository = promptConfigRepository,
+            operatorSecret = promptOperatorSecret,
         )
     }.start(wait = true)
 }
@@ -60,6 +64,7 @@ fun Application.module(
     sessionsRepository: SessionsRepository? = null,
     signInRateLimiter: SignInRateLimiter = NoopSignInRateLimiter,
     promptConfigRepository: PromptConfigRepository? = null,
+    operatorSecret: String? = null,
 ) {
     install(ContentNegotiation) { json() }
     migrationRunner?.migrate()
@@ -79,7 +84,7 @@ fun Application.module(
         sessionsRepository?.let { signOutRoute(it) }
         // Prompt config is authed (requireAuth needs installSessionAuth, done
         // above when sessions are present).
-        promptConfigRepository?.let { promptConfigRoute(it) }
+        promptConfigRepository?.let { promptConfigRoute(it, operatorSecret) }
     }
 }
 

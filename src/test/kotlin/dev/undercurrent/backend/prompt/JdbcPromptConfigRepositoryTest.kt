@@ -52,6 +52,28 @@ class JdbcPromptConfigRepositoryTest : BehaviorSpec({
         }
     }
 
+    Given("an already-seeded config") {
+        When("update() replaces the preamble") {
+            Then("the new text, a changed revision, and a fresh updated-at are stored and returned") {
+                val repo = JdbcPromptConfigRepository(freshDataSource())
+                repo.seedIfEmpty("the original prompt — long enough to pass the guard")
+                val before = repo.get()!!
+
+                val returned = repo.update("a brand new operator-set base prompt, plenty long")
+
+                returned.preamble shouldBe "a brand new operator-set base prompt, plenty long"
+                returned.revision shouldNotBe before.revision
+                returned.revision shouldBe computeRevision("a brand new operator-set base prompt, plenty long")
+
+                // The change is persisted: a fresh get() reflects it.
+                val after = repo.get()!!
+                after.preamble shouldBe "a brand new operator-set base prompt, plenty long"
+                after.revision shouldBe returned.revision
+                after.updatedAtMs shouldBe returned.updatedAtMs
+            }
+        }
+    }
+
     Given("the revision marker") {
         Then("it is derived from the prompt text — same text same revision, changed text changed revision") {
             computeRevision("alpha") shouldBe computeRevision("alpha")

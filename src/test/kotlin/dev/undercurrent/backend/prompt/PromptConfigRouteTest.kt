@@ -8,11 +8,16 @@ import dev.undercurrent.backend.module
 import dev.undercurrent.backend.sessions.JdbcSessionsRepository
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.put
+import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
 import org.h2.jdbcx.JdbcDataSource
 import java.util.UUID
@@ -100,6 +105,131 @@ class PromptConfigRouteTest : BehaviorSpec({
                     res.status shouldBe HttpStatusCode.ServiceUnavailable
                     res.bodyAsText() shouldContain "\"code\":\"unavailable\""
                 }
+            }
+        }
+    }
+
+    val operatorSecret = "s3cr3t-operator-value"
+    val validPreamble = "You are Undercurrent — a fresh operator-authored base prompt."
+
+    Given("PUT /v1/prompt-config") {
+        When("a request carries the configured operator secret and a valid preamble") {
+            Then("responds 200, and a subsequent get() returns the new text with a changed revision") {
+                val s = freshSetup()
+                s.prompts.seedIfEmpty("the original seeded prompt — long enough to pass")
+                val originalRevision = s.prompts.get()!!.revision
+
+                testApplication {
+                    application {
+                        module(
+                            accountsRepository = s.accounts,
+                            sessionsRepository = s.sessions,
+                            promptConfigRepository = s.prompts,
+                            operatorSecret = operatorSecret,
+                        )
+                    }
+                    val res = client.put("/v1/prompt-config") {
+                        header("X-Operator-Secret", operatorSecret)
+                        contentType(ContentType.Application.Json)
+                        setBody("""{"preamble":"$validPreamble"}""")
+                    }
+                    res.status shouldBe HttpStatusCode.OK
+                    val body = res.bodyAsText()
+                    body shouldContain "\"revision\":\"rev."
+                    body shouldContain "\"updatedAtMs\":"
+                }
+
+                val after = s.prompts.get()!!
+                after.preamble shouldBe validPreamble
+                after.revision shouldNotBe originalRevision
+            }
+        }
+
+        When("the operator secret is wrong or missing") {
+            Then("responds 403 forbidden and the prompt is unchanged") {
+                val s = freshSetup()
+                s.prompts.seedIfEmpty("the original seeded prompt — long enough to pass")
+
+                testApplication {
+                    application {
+                        module(
+                            accountsRepository = s.accounts,
+                            sessionsRepository = s.sessions,
+                            promptConfigRepository = s.prompts,
+                            operatorSecret = operatorSecret,
+                        )
+                    }
+                    val wrong = client.put("/v1/prompt-config") {
+                        header("X-Operator-Secret", "not-the-secret")
+                        contentType(ContentType.Application.Json)
+                        setBody("""{"preamble":"$validPreamble"}""")
+                    }
+                    wrong.status shouldBe HttpStatusCode.Forbidden
+                    wrong.bodyAsText() shouldContain "\"code\":\"forbidden\""
+
+                    val missing = client.put("/v1/prompt-config") {
+                        contentType(ContentType.Application.Json)
+                        setBody("""{"preamble":"$validPreamble"}""")
+                    }
+                    missing.status shouldBe HttpStatusCode.Forbidden
+                }
+
+                s.prompts.get()!!.preamble shouldBe "the original seeded prompt — long enough to pass"
+            }
+        }
+
+        When("the preamble is empty, whitespace, or too short") {
+            Then("responds 400 invalid_request and the prompt is unchanged") {
+                val s = freshSetup()
+                s.prompts.seedIfEmpty("the original seeded prompt — long enough to pass")
+
+                testApplication {
+                    application {
+                        module(
+                            accountsRepository = s.accounts,
+                            sessionsRepository = s.sessions,
+                            promptConfigRepository = s.prompts,
+                            operatorSecret = operatorSecret,
+                        )
+                    }
+                    listOf("", "   ", "too short").forEach { bad ->
+                        val res = client.put("/v1/prompt-config") {
+                            header("X-Operator-Secret", operatorSecret)
+                            contentType(ContentType.Application.Json)
+                            setBody("""{"preamble":"$bad"}""")
+                        }
+                        res.status shouldBe HttpStatusCode.BadRequest
+                        res.bodyAsText() shouldContain "\"code\":\"invalid_request\""
+                    }
+                }
+
+                s.prompts.get()!!.preamble shouldBe "the original seeded prompt — long enough to pass"
+            }
+        }
+
+        When("no operator secret is configured on the server (env var unset)") {
+            Then("responds 403 fail-closed even with a correct-looking request, prompt unchanged") {
+                val s = freshSetup()
+                s.prompts.seedIfEmpty("the original seeded prompt — long enough to pass")
+
+                testApplication {
+                    application {
+                        module(
+                            accountsRepository = s.accounts,
+                            sessionsRepository = s.sessions,
+                            promptConfigRepository = s.prompts,
+                            operatorSecret = null,
+                        )
+                    }
+                    val res = client.put("/v1/prompt-config") {
+                        header("X-Operator-Secret", "anything")
+                        contentType(ContentType.Application.Json)
+                        setBody("""{"preamble":"$validPreamble"}""")
+                    }
+                    res.status shouldBe HttpStatusCode.Forbidden
+                }
+
+                s.prompts.get()!!.preamble shouldBe "the original seeded prompt — long enough to pass"
             }
         }
     }
