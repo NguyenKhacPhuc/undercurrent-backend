@@ -11,6 +11,10 @@ import dev.undercurrent.backend.auth.signOutRoute
 import dev.undercurrent.backend.auth.signUpRoute
 import dev.undercurrent.backend.db.Db
 import dev.undercurrent.backend.db.MigrationRunner
+import dev.undercurrent.backend.prompt.JdbcPromptConfigRepository
+import dev.undercurrent.backend.prompt.PromptConfigRepository
+import dev.undercurrent.backend.prompt.SeedPrompt
+import dev.undercurrent.backend.prompt.promptConfigRoute
 import dev.undercurrent.backend.sessions.JdbcSessionsRepository
 import dev.undercurrent.backend.sessions.SessionsRepository
 import dev.undercurrent.backend.sessions.installSessionAuth
@@ -35,12 +39,17 @@ fun main() {
     val accountsRepository = JdbcAccountsRepository(dataSource)
     val sessionsRepository = JdbcSessionsRepository(dataSource)
     val signInRateLimiter = InMemorySignInRateLimiter()
+    val promptConfigRepository = JdbcPromptConfigRepository(dataSource)
+    // Behavior-neutral cut-over: seed the served prompt with today's
+    // app-owned preamble if no operator value exists yet (idempotent).
+    promptConfigRepository.seedIfEmpty(SeedPrompt.APP_INTRO)
 
     embeddedServer(Netty, port = port, host = "0.0.0.0") {
         module(
             accountsRepository = accountsRepository,
             sessionsRepository = sessionsRepository,
             signInRateLimiter = signInRateLimiter,
+            promptConfigRepository = promptConfigRepository,
         )
     }.start(wait = true)
 }
@@ -50,6 +59,7 @@ fun Application.module(
     accountsRepository: AccountsRepository? = null,
     sessionsRepository: SessionsRepository? = null,
     signInRateLimiter: SignInRateLimiter = NoopSignInRateLimiter,
+    promptConfigRepository: PromptConfigRepository? = null,
 ) {
     install(ContentNegotiation) { json() }
     migrationRunner?.migrate()
@@ -67,6 +77,9 @@ fun Application.module(
         // that minimal dep accurately and (b) reduce merge-conflict surface
         // when sibling stories add routes to the joint block above.
         sessionsRepository?.let { signOutRoute(it) }
+        // Prompt config is authed (requireAuth needs installSessionAuth, done
+        // above when sessions are present).
+        promptConfigRepository?.let { promptConfigRoute(it) }
     }
 }
 
